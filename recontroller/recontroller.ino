@@ -62,6 +62,7 @@ void displaySensorDetails(void)
 
 void setup() 
 {
+  pinMode(17,INPUT);
   // put your setup code here, to run once:
   bus0.begin(21, 22, 400000);
   //bus1.begin(18, 19, 400000);
@@ -80,14 +81,14 @@ void setup()
     }
   }
   attempts = 0;
-  while(!bno_0.begin())
-  {
-    attempts++;
-    if(attempts >= max_attempts) {
-      Serial.println("Could not initialize finger 1 BNO055");
-      break;
-    }
-  }
+//  while(!bno_0.begin())
+//  {
+//    attempts++;
+//    if(attempts >= max_attempts) {
+//      Serial.println("Could not initialize finger 1 BNO055");
+//      break;
+//    }
+//  }
 
   // Use external crystal for better accuracy
   bno.setExtCrystalUse(true);
@@ -101,16 +102,18 @@ void setup()
 void loop() 
 {
   if((tempLoop = millis()) - lastLoop >= loopTime) 
-  {         
+  {
     // Update data
     update_hand();
 
     //Display data 
+    Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_vel_hand) + ", ");
+    Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_pos_hand) + ", ");
     Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_acc_hand) + ", ");
-    Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_vel_hand) + "\n");
-    // Serial.print("Hand Position: "); Serial.println();
+    Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_vel_hand) + ", ");
+    Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_pos_hand) + "\n");
     
-    lastLoop = tempLoop;
+    lastLoop = lastLoop + loopTime;
   }
 }
 
@@ -123,7 +126,8 @@ void update_hand()
 {
   int next_index = (data_buffer_index + 1)%r_buffer_depth; // Calculate the next index
 
-  r_data_buffer[next_index].ang_pos_hand = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+  //r_data_buffer[next_index].ang_pos_hand = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
+  r_data_buffer[next_index].ang_pos_hand = bno.getQuat().toMatrix().col_to_vector(2);
   r_data_buffer[next_index].ang_vel_hand = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
   r_data_buffer[next_index].lin_acc_hand = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
   r_data_buffer[next_index].grav = bno.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
