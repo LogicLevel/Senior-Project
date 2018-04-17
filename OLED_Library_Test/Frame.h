@@ -11,14 +11,14 @@
       Frame(String n);
 
       // pointers to fram links
-      Frame *front = NULL;
-      Frame *back = NULL;
+      Frame *up = NULL;
+      Frame *down = NULL;
       Frame *left = NULL;
       Frame *right = NULL;
 
       // define alowable gestures
-      byte *toggle = NULL;
-      byte *variableSet = NULL;
+      byte *select = NULL;
+      //byte *variableSet = NULL;
       byte *cancel = NULL;
       byte *home = NULL;
 

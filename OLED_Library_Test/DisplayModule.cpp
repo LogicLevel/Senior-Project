@@ -2,7 +2,7 @@
 #include "DisplayModule.h"
 
 
-DisplayModule::DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home){
+DisplayModule::DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home, Gesture *g){
   // store all pointer data
   display = disp;
   wifiActive = wifi;
@@ -10,17 +10,16 @@ DisplayModule::DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *ba
   batteryStatus = battery;
   homeFrame = home;
   activeFrame = home;
+  gesture = g;
 }
 
-void DisplayModule::setup(Frame *f, Gesture g){
-  // store pointer to homeframe
-  homeFrame = f;
-  gesture = g;
-
+void DisplayModule::setup(){
   // set up the SSD1306 library
   display->init();
   display->flipScreenVertically();
-  display->display();
+  display->setTextAlignment(TEXT_ALIGN_CENTER);
+  display->setFont(ArialMT_Plain_24);
+  drawDisplay();
 }
 
 void DisplayModule::drawDisplay(){
@@ -31,6 +30,11 @@ void DisplayModule::drawDisplay(){
   display->display();
 }
 
+void DisplayModule::updateDisplay(){
+  if (gesture->flag)
+    processGesture();
+}
+
 #define horizontal_x 48
 #define vertial_y 24
 void DisplayModule::drawIndicators(){
@@ -39,11 +43,11 @@ void DisplayModule::drawIndicators(){
   if (activeFrame != NULL) {
     Serial.println("frame active");
     // Horizontal Icons
-    if (activeFrame->front != NULL)
+    if (activeFrame->up != NULL)
       display->drawXbm(horizontal_x, 0, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_filled_bits);
     else
       display->drawXbm(horizontal_x, 0, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_bits);
-    if (activeFrame->back != NULL)
+    if (activeFrame->down != NULL)
       display->drawXbm(horizontal_x, 59, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_filled_bits);
     else
       display->drawXbm(horizontal_x, 59, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_bits);
@@ -69,18 +73,8 @@ void DisplayModule::drawIcons(){
 
 # define display_length 4
 void DisplayModule::drawText(){
-  display->setTextAlignment(TEXT_ALIGN_CENTER);
-  display->setFont(ArialMT_Plain_10);
-  // copy string varialbe to
-  char name_short[display_length];
-  if (activeFrame->name.length() > (display_length-1)){
-    for (int i=0; i<display_length; i=i+1)
-      name_short[i] = activeFrame->name.charAt(i);
-  } else {
-    for (int i=0; i<name.length(); i=i+1)
-      name_short[i] = activeFrame->name.charAt(i);
-  }
-  display->drawString(26, 64, name_short);
+  Serial.print("Drawing Text:  ");
+  display->drawString(64, 20, activeFrame->name);
 }
 
 void DisplayModule::changeFrame(Frame *f){
@@ -93,72 +87,55 @@ void DisplayModule::changeFrame(Frame *f){
 }
 
 void DisplayModule::processGesture(){
+  Serial.println("processing gresture");
   // check to see if a new gesture has been registered
-  if (gesture.flag)
-  {
-    // reset flag
-    gesture.flag = 0;
-    if (gesture.up) {
-      // check if the gesture is valid
-      if (activeFrame.up != NULL)
-        changeFrame(activeFrame->up)
-      else
-        // HAPTIC FEADBACK HERE
-      gesture.up == 0; // reset flag
-    }
-    else if (gesture.down) {
-      // check if the gesture is valid
-      if (activeFrame->down != NULL)
-        changeFrame(activeFrame->down)
-      else
-        // HAPTIC FEADBACK HERE
-      gesture.down == 0; // reset flag
-    }
-    else if (gesture.right) {
-      // check if the gesture is valid
-      if (activeFrame->right != NULL)
-        changeFrame(activeFrame->right)
-      else
-        // HAPTIC FEADBACK HERE
-      gesture.right == 0; // reset flag
-    }
-    else if (gesture.left) {
-      // check if the gesture is valid
-      if (activeFrame->left != NULL)
-        changeFrame(activeFrame->left)
-      else
-        // HAPTIC FEADBACK HERE
-      gesture.left == 0; // reset flag
-    }
-    else if (gesture.select) {
-      // check if the gesture is valid
-      if (activeFrame->select != NULL)
-        *activeFrame->select = 1;
-      else
-        // HAPTIC FEADBACK HERE
-      gesture.select == 0; // reset flag
-    }
-    /*
-    else if (gesture.variableSet) {
-      if (activeFrame->variableSet != NULL){
-        variableSet();
-        variableSetActive = 1;
-      }
-    }
-    */
-    else if (gesture.cancel) {
-      if (activeFrame->cancel != NULL)
-        // do something here
-      variableSetActive = 0;
-      changeFrame(activeFrame);
-      gesture.cancel == 0; // reset flag
-    }
-    else if (gesture.home) {
-      changeFrame(homeFrame);
-      gesture.home == 0; // reset flag
-    }
-    // reset the flag
+  // reset flag
+  gesture->flag = 0;
+  if (gesture->up) {
+    // check if the gesture is valid
+    if (activeFrame->up != NULL)
+      changeFrame(activeFrame->up);
+    else
+      // HAPTIC FEADBACK HERE
+    gesture->up = 0; // reset flag
   }
+  else if (gesture->down) {
+    // check if the gesture is valid
+    if (activeFrame->down != NULL)
+      changeFrame(activeFrame->down);
+    else
+      // HAPTIC FEADBACK HERE
+    gesture->down = 0; // reset flag
+  }
+  else if (gesture->right) {
+    // check if the gesture is valid
+    if (activeFrame->right != NULL)
+      changeFrame(activeFrame->right);
+    else
+      // HAPTIC FEADBACK HERE
+    gesture->right = 0; // reset flag
+  }
+  else if (gesture->left) {
+    // check if the gesture is valid
+    if (activeFrame->left != NULL)
+      changeFrame(activeFrame->left);
+    else
+      // HAPTIC FEADBACK HERE
+    gesture->left = 0; // reset flag
+  }
+  else if (gesture->select) {
+    // check if the gesture is valid
+    if (activeFrame->select != NULL)
+      *activeFrame->select = 1;
+    else
+      // HAPTIC FEADBACK HERE
+    gesture->select = 0; // reset flag
+  }
+  else if (gesture->home) {
+    changeFrame(homeFrame);
+    gesture->home = 0; // reset flag
+  }
+  // reset the flag
 }
 
 /*
@@ -175,5 +152,3 @@ void DisplayModule::variableTilt(){
   }
 }
 */
-
-}
