@@ -24,14 +24,14 @@ typedef struct
 } r_data;
 
 TwoWire bus0 = TwoWire(1);
-TwoWire bus1 = TwoWire(1);
+//TwoWire bus1 = TwoWire(1);
 
 int r_buffer_depth = 10;
 r_data* r_data_buffer; // Data buffer, n samples deep
 int data_buffer_index = 0; // Signifies the newest data index
 
-Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28, &bus0);
-Adafruit_BNO055 bno_1 = Adafruit_BNO055(55, 0x29, &bus0);
+Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29, &bus0);
+Adafruit_BNO055 bno_1 = Adafruit_BNO055(55, 0x28, &bus0);
 
 
 // Defaults: SDA - Pin 21, SCL - Pin 22
@@ -62,13 +62,31 @@ void displaySensorDetails(void)
 void setup() 
 {
   // put your setup code here, to run once:
-  Wire.begin(21, 22, 400000);
+  bus0.begin(21, 22, 400000);
+  //bus1.begin(18, 19, 400000);
   r_data_buffer = new r_data[r_buffer_depth];
   Serial.begin(115200);
 
-    // Initialise the sensor
+  int max_attempts = 10;
+  int attempts = 0;
+  // Initialise the sensor
   while(!bno.begin())
-  {}
+  {
+    attempts++;
+    if(attempts >= max_attempts) {
+      Serial.println("Could not initialize hand BNO055");
+      break;
+    }
+  }
+  attempts = 0;
+  while(!bno_1.begin())
+  {
+    attempts++;
+    if(attempts >= max_attempts) {
+      Serial.println("Could not initialize finger 1 BNO055");
+      break;
+    }
+  }
 
   // Use external crystal for better accuracy
   bno.setExtCrystalUse(true);
@@ -90,10 +108,9 @@ void loop()
     // Update data
     update_hand(&event);
 
-    
-
     //Display data 
     Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_acc_hand) + "\n");
+    Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_pos_hand) + "\n\n");
     // Serial.print("Hand Position: "); Serial.println();
     
     lastLoop = tempLoop;
