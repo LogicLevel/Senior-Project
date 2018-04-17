@@ -88,7 +88,9 @@ void loop()
     bno.getEvent(&event);
           
     // Update data
-    new_r_data(&event);
+    update_hand(&event);
+
+    
 
     //Display data 
     Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_acc_hand) + "\n");
@@ -103,7 +105,7 @@ String fromVector(float* vector) {
   return out;
 }
 
-void new_r_data(sensors_event_t* event)
+void update_hand(sensors_event_t* event)
 {
   int next_index = (data_buffer_index + 1)%r_buffer_depth; // Calculate the next index
   memcpy(r_data_buffer[next_index].ang_pos_hand, event->orientation.v, 3*sizeof(float)); // Copy in the orientation vector
