@@ -3,6 +3,8 @@
 
 #include "Arduino.h"
 
+
+
   class Frame
   {
     public:
@@ -14,8 +16,11 @@
       Frame *left = NULL;
       Frame *right = NULL;
 
-      // execution pointer for
-      void addAction(int i);
+      // define alowable gestures
+      byte *toggle = NULL;
+      byte *variableSet = NULL;
+      byte *cancel = NULL;
+      byte *home = NULL;
 
       String name;
 
