@@ -69,6 +69,18 @@ void DisplayModule::drawIcons(){
     display->drawXbm(108, 0, wifi_w, wifi_h, wifi_bits);
   if (blutoothActive != NULL)
     display->drawXbm(92, 0, BT_w, BT_h, BT_bits);
+
+  // draw battery Icon
+  if (*batteryStatus == 0)
+    display->drawXbm(0, 0, battery_25_w, battery_25_h, battery_25_bits);
+  else if (*batteryStatus == 1)
+    display->drawXbm(0, 0, battery_50_w, battery_50_h, battery_50_bits);
+  else if (*batteryStatus == 2)
+    display->drawXbm(0, 0, battery_75_w, battery_75_h, battery_75_bits);
+  else if (*batteryStatus == 3)
+    display->drawXbm(0, 0, battery_100_w, battery_100_h, battery_100_bits);
+
+}
 }
 
 # define display_length 4
