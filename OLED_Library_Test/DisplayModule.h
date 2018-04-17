@@ -6,14 +6,15 @@
 #include <Wire.h>
 #include "SSD1306.h"
 #include "images.h"
+#include "Gesture.h"
 
   class DisplayModule
   {
     public:
-      DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home);
+      DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home, Gesture *g);
 
       // set up Display with f as the homeframe
-      void setup(Frame *f, Gesture g);
+      void setup();
 
       // pointers to fram links
       Frame *activeFrame = NULL;
@@ -24,7 +25,7 @@
       byte *blutoothActive = 0;
       byte *batteryStatus = 0;
 
-      void compute();
+      void updateDisplay();
 
     private:
       // Initialize the OLED display using Wire library
@@ -51,7 +52,7 @@
       // draws the name of the frame
       void drawText();
 
-      void variableSet();
+      //void variableTilt();
       byte variableSetActive = 0;
 
   };

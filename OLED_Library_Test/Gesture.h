@@ -18,7 +18,7 @@
       // interfacing gestures
       byte select = 0;
       // byte variableSet = 0;
-      byte cancel = 0;
+      // byte cancel = 0;
       byte home = 0;
 
       // this value measures tilt of the hand when the variableSet byte is one
@@ -28,6 +28,6 @@
 
     private:
 
-  }
+  };
 
 #endif
