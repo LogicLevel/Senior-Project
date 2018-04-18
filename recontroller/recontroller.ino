@@ -11,6 +11,8 @@ typedef struct
 {
   // Central hand kinematics
   imu::Vector<3> grav;
+  imu::Vector<3> normal_hand;
+
   imu::Vector<3> ang_pos_hand;
   imu::Vector<3> ang_vel_hand;
 
@@ -109,6 +111,7 @@ void loop()
     //Display data 
     Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_vel_hand) + ", ");
     Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_pos_hand) + ", ");
+    Serial.print(fromVector(r_data_buffer[data_buffer_index].normal_hand) + ", ");
     Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_acc_hand) + ", ");
     Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_vel_hand) + ", ");
     Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_pos_hand) + "\n");
@@ -126,42 +129,30 @@ void update_hand()
 {
   int next_index = (data_buffer_index + 1)%r_buffer_depth; // Calculate the next index
 
-  //r_data_buffer[next_index].ang_pos_hand = bno.getVector(Adafruit_BNO055::VECTOR_EULER);
-  r_data_buffer[next_index].ang_pos_hand = bno.getQuat().toMatrix().col_to_vector(2);
+  r_data_buffer[next_index].normal_hand = bno.getQuat().toMatrix().col_to_vector(2);
   r_data_buffer[next_index].ang_vel_hand = bno.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
   r_data_buffer[next_index].lin_acc_hand = bno.getVector(Adafruit_BNO055::VECTOR_ACCELEROMETER);
   r_data_buffer[next_index].grav = bno.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
   r_data_buffer[next_index].lin_acc_hand = r_data_buffer[next_index].lin_acc_hand/10.19*9.81 - r_data_buffer[next_index].grav;
-//  if(fabs(r_data_buffer[next_index].lin_acc_hand.x()) < 0.05) {
-//    r_data_buffer[next_index].lin_acc_hand = r_data_buffer[next_index].lin_acc_hand.dot(imu::Vector<3>(0,1,1));
-//  }
-//  if(fabs(r_data_buffer[next_index].lin_acc_hand.y()) < 0.05) {
-//    r_data_buffer[next_index].lin_acc_hand = r_data_buffer[next_index].lin_acc_hand.dot(imu::Vector<3>(1,0,1));
-//  }
-//  if(fabs(r_data_buffer[next_index].lin_acc_hand.z()) < 0.05) {
-//    r_data_buffer[next_index].lin_acc_hand = r_data_buffer[next_index].lin_acc_hand.dot(imu::Vector<3>(1,1,0));
-//  }
-  
-  // Integrate acceleration for velocity
 
-  r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand*0;
+  // Integration
+  r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand*0; // Reset lin vel
+  r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand*0; // Reset lin pos
+  r_data_buffer[next_index].ang_pos_hand = r_data_buffer[next_index].ang_pos_hand*0; // Reset ang pos
   for (int i = 0; i < r_buffer_depth; i++) {
+    r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand + r_data_buffer[i].lin_acc_hand; // Integrate for lin vel
+    r_data_buffer[next_index].ang_pos_hand = r_data_buffer[next_index].ang_pos_hand + r_data_buffer[i].ang_vel_hand; // Integrate for ang pos
     if (i != next_index) {
-      r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand + r_data_buffer[i].lin_acc_hand;
+      r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand + r_data_buffer[i].lin_vel_hand; // Integrate for lin pos (exclude current index)
     }
   }
-  r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand * (0.001 * loopTime);
+  r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand * (0.001 * loopTime); // Multiply by dt
+  r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand + r_data_buffer[next_index].lin_vel_hand; // Final step integration for lin pos
+  r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand * (0.001 * loopTime); // Multiply by dt
+  r_data_buffer[next_index].ang_pos_hand = r_data_buffer[next_index].ang_pos_hand * (0.001 * loopTime); // Multiply by dt
 
-  r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand*0;
-  for (int i = 0; i < r_buffer_depth; i++) {
-    if (i != next_index) {
-      r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand + r_data_buffer[i].lin_vel_hand;
-    }
-  }
-  r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand * (0.001 * loopTime);
-
-  r_data_buffer[next_index].ang_pos_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_EULER);
-  r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  //r_data_buffer[next_index].ang_pos_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_EULER);
+  //r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
   
   data_buffer_index = next_index; // Increment the current index
 }
