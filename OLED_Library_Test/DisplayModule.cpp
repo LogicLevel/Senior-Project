@@ -48,15 +48,15 @@ void DisplayModule::drawIndicators(){
     else
       display->drawXbm(horizontal_x, 0, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_bits);
     if (activeFrame->down != NULL)
-      display->drawXbm(horizontal_x, 59, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_filled_bits);
+      display->drawXbm(horizontal_x, 56, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_filled_bits);
     else
-      display->drawXbm(horizontal_x, 59, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_bits);
+      display->drawXbm(horizontal_x, 56, indicator_horizonal_w, indicator_horizonal_h, indicator_horizonal_bits);
 
     // Vertical Icons
     if (activeFrame->right != NULL)
-      display->drawXbm(122, vertial_y, indicator_vertical_w, indicator_vertical_h, indicator_vertial_filled_bits);
+      display->drawXbm(118, vertial_y, indicator_vertical_w, indicator_vertical_h, indicator_vertial_filled_bits);
     else
-      display->drawXbm(122, vertial_y, indicator_vertical_w, indicator_vertical_h, indicator_vertical_bits);
+      display->drawXbm(118, vertial_y, indicator_vertical_w, indicator_vertical_h, indicator_vertical_bits);
     if (activeFrame->left != NULL)
       display->drawXbm(0, vertial_y, indicator_vertical_w, indicator_vertical_h, indicator_vertial_filled_bits);
     else
@@ -79,8 +79,6 @@ void DisplayModule::drawIcons(){
     display->drawXbm(0, 0, battery_75_w, battery_75_h, battery_75_bits);
   else if (*batteryStatus == 3)
     display->drawXbm(0, 0, battery_100_w, battery_100_h, battery_100_bits);
-
-}
 }
 
 # define display_length 4
