@@ -2,6 +2,29 @@
 #include <Adafruit_Sensor.h>
 #include "Adafruit_BNO055.h"
 #include "utility/imumaths.h"
+#include "DisplayModule.h"
+#include "Frame.h"
+#include "Gesture.h"
+
+// Morgans code
+
+Gesture gesture = Gesture();
+  // oled setup
+SSD1306 display(0x3c, 23, 22);
+byte wifiStat = 0;
+byte blutoothStat = 0;
+byte batteryStat = 0;
+
+// declare all frame object and link them together here
+Frame homeFrame = Frame("home");
+
+Frame hue = Frame("Hue");
+Frame light1 = Frame("Light1");
+Frame light2 = Frame("Light2");
+
+DisplayModule DM = DisplayModule(&display, &wifiStat, &blutoothStat, &batteryStat, &homeFrame, &gesture);
+
+// Annos code
 
 #define GEST_TILT_L   1<<0
 #define GEST_TILT_R   1<<1
@@ -11,8 +34,6 @@
 #define GEST_TAP_1    1<<5
 #define GEST_TAP_2    1<<6
 
-
-
 int loopTime = 20;  // Loop time in milliseconds
 long lastLoop = 0;  // Last loop time in milliseconds
 long tempLoop = 0;  // Temp loop to reduce overhead
@@ -21,7 +42,7 @@ long retTime = 0;
 
 long lastGest = 0;
 
-typedef struct 
+typedef struct
 {
   // Central hand kinematics
   imu::Vector<3> grav;
@@ -78,8 +99,10 @@ void displaySensorDetails(void)
 
 //***********************************************************************
 
-void setup() 
+void setup()
 {
+  // link all frames
+  linkFrames();
   pinMode(17,INPUT);
   // put your setup code here, to run once:
   bus0.begin(21, 22, 400000);
@@ -112,17 +135,21 @@ void setup()
 
   // Use external crystal for better accuracy
   bno.setExtCrystalUse(true);
-   
+
   // Display some basic information on this sensor
   displaySensorDetails();
 
   // Hit that low pass
 }
 
-void loop() 
+void loop()
 {
+  // Display code
+  DM.updateDisplay();
+  gestureTest();
+
   tempLoop = millis();
-  if(tempLoop - lastLoop >= loopTime) 
+  if(tempLoop - lastLoop >= loopTime)
   {
     // Update data
     update_hand();
@@ -134,14 +161,14 @@ void loop()
       }
       lastGest = gests;
     }
-    //Display data 
+    //Display data
     if(lastBtn == 1 && digitalRead(17) == 0) {
       lastBtn = 0;
       out = !out;
     } else if(digitalRead(17) == 1) {
       lastBtn = 1;
     }
-    
+
     if(out) {
       Serial.print(lastLoop + loopTime);
       Serial.print(", ");
@@ -152,7 +179,7 @@ void loop()
       Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_vel_hand) + ", ");
       Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_pos_hand) + "\n");
     }
-    
+
     lastLoop = lastLoop + loopTime;
   }
 }
@@ -191,23 +218,42 @@ void update_hand()
 
   //r_data_buffer[next_index].ang_pos_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_EULER);
   //r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-  
+
   data_buffer_index = next_index; // Increment the current index
 }
 
 long calc_gestures() {
   long out = 0;
   r_data* data = &r_data_buffer[data_buffer_index];
-  if(data->ang_pos_hand.x() <= -40 && data->grav.dot(imu::Vector<3>(0,-1,0)) >= 0.6) {
+  if(data->ang_pos_hand.x() <= -40 && data->grav.dot(imu::Vector<3>(0,-1,0)) >= 0.6) { // right
     out = out | GEST_TILT_R;
-  } else if(data->ang_pos_hand.x() >= 40 && data->grav.dot(imu::Vector<3>(0,1,0)) >= 0.5) {
+    gesture.right = 1;
+    gesture.flag = 1;
+  } else if(data->ang_pos_hand.x() >= 40 && data->grav.dot(imu::Vector<3>(0,1,0)) >= 0.5) { // left
     out = out | GEST_TILT_L;
-  } else if(data->ang_pos_hand.y() >= 40 && data->grav.dot(imu::Vector<3>(-1,0,0)) >= 0.5) {
+    gesture.left = 1;
+    gesture.flag = 1;
+  } else if(data->ang_pos_hand.y() >= 40 && data->grav.dot(imu::Vector<3>(-1,0,0)) >= 0.5) { // up
     out = out | GEST_TILT_U;
-  } else if(data->ang_pos_hand.y() <= -40 && data->grav.dot(imu::Vector<3>(1,0,0)) >= 0.5) {
+    gesture.up = 1;
+    gesture.flag = 1;
+  } else if(data->ang_pos_hand.y() <= -40 && data->grav.dot(imu::Vector<3>(1,0,0)) >= 0.5) { // down
     out = out | GEST_TILT_D;
+    gesture.down = 1;
+    gesture.flag = 1;
   }
-  
+
   return out;
 }
 
+void linkFrames(){
+  // link frames here
+  homeFrame.right = &hue;
+  hue.left = &homeFrame;
+
+  hue.up = &light1;
+  light1.down = &hue;
+
+  light1.up = &light2;
+  light2.down = &light1;
+}
