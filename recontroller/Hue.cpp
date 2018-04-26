@@ -9,17 +9,23 @@ Morse::Morse(int pin)
 }
 */
 
-void Hue::connect()
+int Hue::connect()
 {
   Serial.begin(115200);
   WiFi.begin(ssid, password);
 
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.println("Connecting to WiFi..");
+  //WiFi.status() != WL_CONNECTED
+  int i;
+  for (i=0; i<5; i=i+1) {
+    if (WiFi.status() != WL_CONNECTED){
+      delay(500);
+      Serial.println("Connecting to WiFi..");
+    } else {
+      Serial.println("Connected to the WiFi network");
+      return 1;
+    }
   }
-
-  Serial.println("Connected to the WiFi network");
+  Serial.println("Failed to connect to WiFi network");
 }
 
 void Hue::scanNetworks() {
