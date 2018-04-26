@@ -20,9 +20,9 @@
 
       void compute() {
         if (select == 1)
-          select();
+          sel();
         else if (reject == 1)
-          reject();
+          rej();
 
         // process timers
         if (millis() < timer_1) { // turn on buzzer
@@ -49,14 +49,14 @@
 
       byte buzz1_active = 0;
       // loads timers for an acceptable action
-      void select(){
+      void sel(){
         timer_1 = millis() + timer_1_on_time;
         select = 0;
       }
       // loads timers for an invalid action
-      void reject(){
-        timer1 = millis() + timer_1_on_time;
-        timer_2_on = timer1 + timer_1_off_time;
+      void rej(){
+        timer_1 = millis() + timer_1_on_time;
+        timer_2_on = timer_1 + timer_1_off_time;
         timer_2_off = timer_2_on + timer_2_on_time;
         reject = 0;
       }
