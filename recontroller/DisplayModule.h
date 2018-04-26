@@ -28,6 +28,9 @@
       void updateDisplay();
       void displayOff();
       void displayOn();
+      void displayClear();
+      // draws the current frame, indicators, and icons
+      void drawDisplay();
 
     private:
       // Initialize the OLED display using Wire library
@@ -39,9 +42,6 @@
       //   the Frame pointers of the active frame module
       //   to determin indicator state
       void drawIndicators();
-
-      // draws the current frame, indicators, and icons
-      void drawDisplay();
 
       // draws the blutooth wifi and battery icons
       void drawIcons();

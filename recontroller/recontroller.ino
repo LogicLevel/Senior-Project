@@ -41,6 +41,9 @@ long tempLoop = 0;  // Temp loop to reduce overhead
 long deadTime = 500; // Dead time between gestures
 long retTime = 0;
 
+int batLoopTime = 2000;
+int lastBatLoop = 0;
+
 long lastGest = 0;
 
 typedef struct
@@ -175,9 +178,20 @@ bool initBNO(Adafruit_BNO055* bno, int max_attempts) {
 void loop()
 {
   tempLoop = millis();
+  if(tempLoop - lastBatLoop >= batLoopTime)
+  {
+    float vbat = 0.0006495*analogRead(36) + 1.6452;
+    batteryStat = (int)((vbat-3.2)/(4.2-3.2));
+    Serial.println(batteryStat);
+    if(displayState) {
+      DM.displayClear();
+      DM.drawDisplay();
+    }
+    lastBatLoop = lastBatLoop + batLoopTime;
+  }
   if(tempLoop - lastLoop >= loopTime)
   {
-    Serial.println(touchRead(T7));
+    // Touch sensor
     bool btn = (touchRead(T7) < 30);
     if(btn == true && lastBtn == false) {
       displayState = !displayState;
@@ -191,6 +205,7 @@ void loop()
     if(displayState) {
       DM.updateDisplay();
     }
+    
     // Update data
     update_hand();
     if (tempLoop >= retTime) {

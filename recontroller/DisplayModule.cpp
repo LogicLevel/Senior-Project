@@ -35,6 +35,10 @@ void DisplayModule::updateDisplay(){
     processGesture();
 }
 
+void DisplayModule::displayClear() {
+  display->clear();
+}
+
 void DisplayModule::displayOn(){
   display->displayOn();
 }
