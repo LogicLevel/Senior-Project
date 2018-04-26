@@ -3,6 +3,7 @@
 #include "DisplayModule.h"
 #include "Frame.h"
 #include "Gesture.h"
+#include "Haptic.h"
 
 
 SSD1306 display(0x3c, 23, 22);
@@ -19,9 +20,10 @@ Frame light2 = Frame("Light2");
 
 // Create gesture object
 Gesture gesture = Gesture();
+Haptic haptic = Haptic(22);
 
 // gesture vector
-DisplayModule DM = DisplayModule(&display, &wifiStat, &blutoothStat, &batteryStat, &homeFrame, &gesture);
+DisplayModule DM = DisplayModule(&display, &wifiStat, &blutoothStat, &batteryStat, &homeFrame, &gesture, &haptic);
 
 const int b1 = A0;
 const int b2 = A1;
@@ -44,8 +46,8 @@ void setup() {
   // put your setup code here, to run once:
   linkFrames();
   DM.setup();
-  
-  
+  haptic.setup();
+
   // these are used for testing gestures with a button
   // declare inputs and set pull up resistors
   pinMode(b1, INPUT);
@@ -54,7 +56,7 @@ void setup() {
   pinMode(b4, INPUT);
   pinMode(b5, INPUT);
   pinMode(b6, INPUT);
-  
+
 
   Serial.println("Setup Complete");
 }
@@ -62,6 +64,7 @@ void setup() {
 void loop() {
   DM.updateDisplay();
   gestureTest();
+  haptic.compute(); 
 
   delay(200);
 }
@@ -127,10 +130,10 @@ void linkFrames(){
   // link frames here
   homeFrame.right = &hue;
   hue.left = &homeFrame;
-  
+
   hue.up = &light1;
   light1.down = &hue;
-  
+
   light1.up = &light2;
   light2.down = &light1;
 }
@@ -139,7 +142,6 @@ void linkFrames(){
 long printInterval = 2000;
 long timer
 void debugPrint(){
-  
+
 }
 */
-

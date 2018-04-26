@@ -5,11 +5,14 @@
 #include "DisplayModule.h"
 #include "Frame.h"
 #include "Gesture.h"
+#include "Haptic.h"
+
 
 TwoWire bus0 = TwoWire(1);
 TwoWire bus1 = TwoWire(0);
 
 Gesture gesture = Gesture();
+Haptic haptic = Haptic(22);
   // oled setup
 SSD1306 display(0x3d, &bus1);
 byte wifiStat = 0;
@@ -23,7 +26,7 @@ Frame hue = Frame("Hue");
 Frame light1 = Frame("Light1");
 Frame light2 = Frame("Light2");
 
-DisplayModule DM = DisplayModule(&display, &wifiStat, &blutoothStat, &batteryStat, &homeFrame, &gesture);
+DisplayModule DM = DisplayModule(&display, &wifiStat, &blutoothStat, &batteryStat, &homeFrame, &gesture, &haptic);
 
 // Annos code
 
@@ -149,9 +152,10 @@ void setup()
 //  } else {
 //    Serial.println("Could not initialize finger 2 IMU, give up");
 //  }
-  
+
   linkFrames();
   DM.setup();
+  haptic.setup();
   // Hit that low pass
 }
 
@@ -177,6 +181,7 @@ bool initBNO(Adafruit_BNO055* bno, int max_attempts) {
 
 void loop()
 {
+  haptic.compute();
   tempLoop = millis();
   if(tempLoop - lastBatLoop >= batLoopTime)
   {
@@ -205,7 +210,7 @@ void loop()
     if(displayState) {
       DM.updateDisplay();
     }
-    
+
     // Update data
     update_hand();
     if (tempLoop >= retTime) {
@@ -354,7 +359,7 @@ void scanI2C(TwoWire* twi) {
     // a device did acknowledge to the address.
     twi->beginTransmission(address);
     int error = twi->endTransmission();
- 
+
     if (error == 0)
     {
       Serial.print("I2C device found at address 0x");
@@ -362,7 +367,7 @@ void scanI2C(TwoWire* twi) {
         Serial.print("0");
       Serial.print(address,HEX);
       Serial.println("  !");
- 
+
       nDevices++;
     }
     else if (error==4)
@@ -371,7 +376,6 @@ void scanI2C(TwoWire* twi) {
       if (address<16)
         Serial.print("0");
       Serial.println(address,HEX);
-    }    
+    }
   }
 }
-

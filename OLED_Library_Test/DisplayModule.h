@@ -7,11 +7,12 @@
 #include "SSD1306.h"
 #include "images.h"
 #include "Gesture.h"
+#include "Haptic.h"
 
   class DisplayModule
   {
     public:
-      DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home, Gesture *g);
+      DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home, Gesture *g, Haptic *h);
 
       // set up Display with f as the homeframe
       void setup();
@@ -31,6 +32,7 @@
       // Initialize the OLED display using Wire library
       SSD1306  *display;
       Gesture *gesture;
+      Haptic *haptic
 
       // ****** DISPLAY FUNCTIONS ****** //
       // draws all inicator blocks

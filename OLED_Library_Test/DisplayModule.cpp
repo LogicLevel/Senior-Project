@@ -2,7 +2,7 @@
 #include "DisplayModule.h"
 
 
-DisplayModule::DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home, Gesture *g){
+DisplayModule::DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *battery, Frame *home, Gesture *g, Haptic *h) {
   // store all pointer data
   display = disp;
   wifiActive = wifi;
@@ -11,6 +11,7 @@ DisplayModule::DisplayModule(SSD1306 *disp, byte *wifi, byte *blutooth, byte *ba
   homeFrame = home;
   activeFrame = home;
   gesture = g;
+  haptic = h;
 }
 
 void DisplayModule::setup(){
@@ -103,46 +104,61 @@ void DisplayModule::processGesture(){
   gesture->flag = 0;
   if (gesture->up) {
     // check if the gesture is valid
-    if (activeFrame->up != NULL)
+    if (activeFrame->up != NULL){
       changeFrame(activeFrame->up);
-    else
-      // HAPTIC FEADBACK HERE
+      haptic->select = 1;
+    } else {
+      haptic->reject = 1;
+    }
     gesture->up = 0; // reset flag
   }
   else if (gesture->down) {
     // check if the gesture is valid
-    if (activeFrame->down != NULL)
+    if (activeFrame->down != NULL){
       changeFrame(activeFrame->down);
-    else
+      haptic->select = 1;
+    } else {
       // HAPTIC FEADBACK HERE
+      haptic->reject = 1;
+    }
     gesture->down = 0; // reset flag
   }
   else if (gesture->right) {
     // check if the gesture is valid
-    if (activeFrame->right != NULL)
+    if (activeFrame->right != NULL){
       changeFrame(activeFrame->right);
-    else
+      haptic->select = 1;
+    } else {
       // HAPTIC FEADBACK HERE
+      haptic->reject = 1;
+    }
     gesture->right = 0; // reset flag
   }
   else if (gesture->left) {
     // check if the gesture is valid
-    if (activeFrame->left != NULL)
+    if (activeFrame->left != NULL){
       changeFrame(activeFrame->left);
-    else
+      haptic->select = 1;
+    } else {
       // HAPTIC FEADBACK HERE
+      haptic->reject = 1;
+    }
     gesture->left = 0; // reset flag
   }
   else if (gesture->select) {
     // check if the gesture is valid
-    if (activeFrame->select != NULL)
+    if (activeFrame->select != NULL){
       *activeFrame->select = 1;
-    else
+      haptic->select = 1;
+    } else {
       // HAPTIC FEADBACK HERE
+      haptic->reject = 1;
+    }
     gesture->select = 0; // reset flag
   }
   else if (gesture->home) {
     changeFrame(homeFrame);
+    haptic->select = 1;
     gesture->home = 0; // reset flag
   }
   // reset the flag
