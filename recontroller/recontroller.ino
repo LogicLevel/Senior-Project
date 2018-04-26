@@ -6,6 +6,7 @@
 #include "Frame.h"
 #include "Gesture.h"
 #include "Haptic.h"
+#include "Hue.h"
 
 
 TwoWire bus0 = TwoWire(1);
@@ -27,6 +28,11 @@ Frame light1 = Frame("Light1");
 Frame light2 = Frame("Light2");
 
 DisplayModule DM = DisplayModule(&display, &wifiStat, &blutoothStat, &batteryStat, &homeFrame, &gesture, &haptic);
+Hue hue = Hue();
+
+
+byte light1 = 0;
+byte light2 = 0;
 
 // Annos code
 
@@ -76,8 +82,6 @@ typedef struct
   imu::Vector<3> ang_vel_fing_2;
 } r_data;
 
-
-
 int r_buffer_depth = 30;
 r_data* r_data_buffer; // Data buffer, n samples deep
 int data_buffer_index = 0; // Signifies the newest data index
@@ -123,6 +127,7 @@ void displaySensorDetails(void)
 void setup()
 {
   Serial.begin(115200);
+  hue.connect();
   // link all frames
   pinMode(23,OUTPUT);
   digitalWrite(23,HIGH);
@@ -246,6 +251,7 @@ void loop()
 
     lastLoop = lastLoop + loopTime;
   }
+  lights_compute();
 }
 
 String fromVector(imu::Vector<3> vector) {
@@ -360,6 +366,9 @@ void linkFrames(){
 
   light1.up = &light2;
   light2.down = &light1;
+
+  light1.select = &light1;
+  light2.select = &light2;
 }
 
 void scanI2C(TwoWire* twi) {
@@ -391,4 +400,27 @@ void scanI2C(TwoWire* twi) {
       Serial.println(address,HEX);
     }
   }
+}
+
+byte light1_last = light1;
+byte light2_last = light2;
+
+void lights_compute(){
+
+  if (light1_last != light1){
+    if (light1)
+      hue.turnOnLight(1);
+    else
+      hue.turnOffLight(1);
+  }
+
+  if (light2_last != light2){
+    if (light2)
+      hue.turnOnLight(2);
+    else
+      hue.turnOffLight(2);
+  }
+  light1_last = light1;
+  light2_last = light2;
+
 }

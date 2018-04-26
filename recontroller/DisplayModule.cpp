@@ -160,7 +160,10 @@ void DisplayModule::processGesture(){
   else if (gesture->select) {
     // check if the gesture is valid
     if (activeFrame->select != NULL){
-      *activeFrame->select = 1;
+      if (*activeFrame->select == 1)
+        *activeFrame->select = 0;
+      else
+        *activeFrame->select = 1;
       haptic->select = 1;
     } else {
       // HAPTIC FEADBACK HERE
