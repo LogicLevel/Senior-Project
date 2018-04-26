@@ -91,6 +91,10 @@ bool out = false;
 bool lastBtn = false;
 bool displayState = true;
 
+int lastTouch = 0;
+int currTouch = 0;
+float alphTouch = 0.2;
+
 // Defaults: SDA - Pin 21, SCL - Pin 22
 /**************************************************************************/
 /*
@@ -118,11 +122,14 @@ void displaySensorDetails(void)
 
 void setup()
 {
+  Serial.begin(115200);
   // link all frames
   pinMode(23,OUTPUT);
   digitalWrite(23,HIGH);
   // put your setup code here, to run once:
   bus0.begin(18, 5, 400000);
+  delay(100);
+  scanI2C(&bus0);
   delay(100);
   bus1.begin(17, 16, 400000);
   delay(100);
@@ -131,17 +138,16 @@ void setup()
   bus1.reset();
   delay(100);
   r_data_buffer = new r_data[r_buffer_depth];
-  Serial.begin(115200);
   if(initBNO(&bno, 5)) {
     Serial.println("Initialized hand IMU");
   } else {
     Serial.println("Could not initialize hand IMU, give up");
   }
-//  if(initBNO(&bno_0, 5)) {
-//    Serial.println("Initialized finger 0 IMU");
-//  } else {
-//    Serial.println("Could not initialize finger 0 IMU, give up");
-//  }
+  if(initBNO(&bno_0, 5)) {
+    Serial.println("Initialized finger 0 IMU");
+  } else {
+    Serial.println("Could not initialize finger 0 IMU, give up");
+  }
 //  if(initBNO(&bno_1, 5)) {
 //    Serial.println("Initialized finger 1 IMU");
 //  } else {
@@ -164,7 +170,6 @@ bool initBNO(Adafruit_BNO055* bno, int max_attempts) {
   // Initialise the sensor
   while(!bno->begin())
   {
-    bus0.reset();
     attempts++;
     if(attempts >= max_attempts) {
       return false;
@@ -186,8 +191,13 @@ void loop()
   if(tempLoop - lastBatLoop >= batLoopTime)
   {
     float vbat = 0.0006495*analogRead(36) + 1.6452;
-    batteryStat = (int)((vbat-3.2)/(4.2-3.2));
-    Serial.println(batteryStat);
+    Serial.println(vbat);
+    batteryStat = (int)(4*(vbat-3.1)/(4.3-3.1)); // Not really 3.1 volts, ADC is kinda nonlinear
+    if(batteryStat > 3) {
+      batteryStat = 3;
+    } else if(batteryStat < 0) {
+      batteryStat = 0;
+    }
     if(displayState) {
       DM.displayClear();
       DM.drawDisplay();
@@ -197,7 +207,10 @@ void loop()
   if(tempLoop - lastLoop >= loopTime)
   {
     // Touch sensor
-    bool btn = (touchRead(T7) < 30);
+    int tempTouch = touchRead(T7);
+    lastTouch = currTouch;
+    currTouch = (int)(alphTouch * tempTouch + (1-alphTouch) * lastTouch);
+    bool btn = (currTouch < 20);
     if(btn == true && lastBtn == false) {
       displayState = !displayState;
       if(displayState) {
@@ -251,12 +264,12 @@ void update_hand()
   r_data_buffer[next_index].grav.normalize();
   r_data_buffer[next_index].lin_acc_hand = r_data_buffer[next_index].lin_acc_hand/10.19*9.81 - r_data_buffer[next_index].grav;
 
-//  r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
-//  r_data_buffer[next_index].ang_vel_fing_0 = imu::Vector<3>(-1*r_data_buffer[next_index].ang_vel_fing_0.x(), -1*r_data_buffer[next_index].ang_vel_fing_0.y(), r_data_buffer[next_index].ang_vel_fing_0.z());
-//  //r_data_buffer[next_index].ang_vel_fing_0 = r_data_buffer[next_index].ang_vel_fing_0 - r_data_buffer[next_index].ang_vel_hand;
-//  r_data_buffer[next_index].grav_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
-//  r_data_buffer[next_index].grav_fing_0.normalize();
-//  r_data_buffer[next_index].grav_fing_0 = imu::Vector<3>(r_data_buffer[next_index].grav_fing_0.x(), -1*r_data_buffer[next_index].grav_fing_0.y(), r_data_buffer[next_index].grav_fing_0.z());
+  r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  r_data_buffer[next_index].ang_vel_fing_0 = imu::Vector<3>(-1*r_data_buffer[next_index].ang_vel_fing_0.x(), -1*r_data_buffer[next_index].ang_vel_fing_0.y(), r_data_buffer[next_index].ang_vel_fing_0.z());
+  //r_data_buffer[next_index].ang_vel_fing_0 = r_data_buffer[next_index].ang_vel_fing_0 - r_data_buffer[next_index].ang_vel_hand;
+  r_data_buffer[next_index].grav_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
+  r_data_buffer[next_index].grav_fing_0.normalize();
+  r_data_buffer[next_index].grav_fing_0 = imu::Vector<3>(r_data_buffer[next_index].grav_fing_0.x(), -1*r_data_buffer[next_index].grav_fing_0.y(), r_data_buffer[next_index].grav_fing_0.z());
 //
 //  r_data_buffer[next_index].ang_vel_fing_1 = bno_1.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
 //  r_data_buffer[next_index].ang_vel_fing_1 = imu::Vector<3>(-1*r_data_buffer[next_index].ang_vel_fing_1.x(), -1*r_data_buffer[next_index].ang_vel_fing_1.y(), r_data_buffer[next_index].ang_vel_fing_1.z());
