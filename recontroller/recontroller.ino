@@ -6,11 +6,12 @@
 #include "Frame.h"
 #include "Gesture.h"
 
-// Morgans code
+TwoWire bus0 = TwoWire(1);
+TwoWire bus1 = TwoWire(0);
 
 Gesture gesture = Gesture();
   // oled setup
-SSD1306 display(0x3c, 23, 22);
+SSD1306 display(0x3d, &bus1);
 byte wifiStat = 0;
 byte blutoothStat = 0;
 byte batteryStat = 0;
@@ -56,13 +57,20 @@ typedef struct
   imu::Vector<3> lin_pos_hand;
 
   // Finger kinematics
+  imu::Vector<3> grav_fing_0;
   imu::Vector<3> ang_pos_fing_0;
   imu::Vector<3> ang_vel_fing_0;
 
+  imu::Vector<3> grav_fing_1;
+  imu::Vector<3> ang_pos_fing_1;
+  imu::Vector<3> ang_vel_fing_1;
+
+  imu::Vector<3> grav_fing_2;
+  imu::Vector<3> ang_pos_fing_2;
+  imu::Vector<3> ang_vel_fing_2;
 } r_data;
 
-TwoWire bus0 = TwoWire(1);
-//TwoWire bus1 = TwoWire(1);
+
 
 int r_buffer_depth = 30;
 r_data* r_data_buffer; // Data buffer, n samples deep
@@ -70,9 +78,12 @@ int data_buffer_index = 0; // Signifies the newest data index
 
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x29, &bus0);
 Adafruit_BNO055 bno_0 = Adafruit_BNO055(55, 0x28, &bus0);
+Adafruit_BNO055 bno_1 = Adafruit_BNO055(55, 0x29, &bus1);
+Adafruit_BNO055 bno_2 = Adafruit_BNO055(55, 0x28, &bus1);
 
 bool out = false;
-int lastBtn = 1;
+bool lastBtn = false;
+bool displayState = true;
 
 // Defaults: SDA - Pin 21, SCL - Pin 22
 /**************************************************************************/
@@ -102,55 +113,84 @@ void displaySensorDetails(void)
 void setup()
 {
   // link all frames
-  linkFrames();
-  pinMode(17,INPUT);
+  pinMode(23,OUTPUT);
+  digitalWrite(23,HIGH);
   // put your setup code here, to run once:
-  bus0.begin(21, 22, 400000);
-  //bus1.begin(18, 19, 400000);
+  bus0.begin(18, 5, 400000);
+  delay(100);
+  bus1.begin(17, 16, 400000);
+  delay(100);
+  bus0.reset();
+  delay(100);
+  bus1.reset();
+  delay(100);
   r_data_buffer = new r_data[r_buffer_depth];
   Serial.begin(115200);
+  if(initBNO(&bno, 5)) {
+    Serial.println("Initialized hand IMU");
+  } else {
+    Serial.println("Could not initialize hand IMU, give up");
+  }
+//  if(initBNO(&bno_0, 5)) {
+//    Serial.println("Initialized finger 0 IMU");
+//  } else {
+//    Serial.println("Could not initialize finger 0 IMU, give up");
+//  }
+//  if(initBNO(&bno_1, 5)) {
+//    Serial.println("Initialized finger 1 IMU");
+//  } else {
+//    Serial.println("Could not initialize finger 1 IMU, give up");
+//  }
+//    if(initBNO(&bno_2, 5)) {
+//    Serial.println("Initialized finger 2 IMU");
+//  } else {
+//    Serial.println("Could not initialize finger 2 IMU, give up");
+//  }
+  
+  linkFrames();
+  DM.setup();
+  // Hit that low pass
+}
 
-  int max_attempts = 10;
+bool initBNO(Adafruit_BNO055* bno, int max_attempts) {
   int attempts = 0;
   // Initialise the sensor
-  while(!bno.begin())
+  while(!bno->begin())
   {
     bus0.reset();
     attempts++;
-    Serial.println("Could not initilize hand BNO055, trying again");
     if(attempts >= max_attempts) {
-      Serial.println("Could not initialize hand BNO055, give up");
+      return false;
       break;
     }
   }
-  attempts = 0;
-//  while(!bno_0.begin())
-//  {
-//    attempts++;
-//    if(attempts >= max_attempts) {
-//      Serial.println("Could not initialize finger 1 BNO055");
-//      break;
-//    }
-//  }
-
-  // Use external crystal for better accuracy
-  bno.setExtCrystalUse(true);
-
-  // Display some basic information on this sensor
-  displaySensorDetails();
-
-  // Hit that low pass
+  if(attempts != max_attempts) {
+    //bno->setExtCrystalUse(true);
+    return true;
+  } else {
+    return false;
+  }
 }
 
 void loop()
 {
-  // Display code
-  DM.updateDisplay();
-  gestureTest();
-
   tempLoop = millis();
   if(tempLoop - lastLoop >= loopTime)
   {
+    Serial.println(touchRead(T7));
+    bool btn = (touchRead(T7) < 30);
+    if(btn == true && lastBtn == false) {
+      displayState = !displayState;
+      if(displayState) {
+        DM.displayOn();
+      } else {
+        DM.displayOff();
+      }
+    }
+    lastBtn = btn;
+    if(displayState) {
+      DM.updateDisplay();
+    }
     // Update data
     update_hand();
     if (tempLoop >= retTime) {
@@ -161,23 +201,14 @@ void loop()
       }
       lastGest = gests;
     }
-    //Display data
-    if(lastBtn == 1 && digitalRead(17) == 0) {
-      lastBtn = 0;
-      out = !out;
-    } else if(digitalRead(17) == 1) {
-      lastBtn = 1;
-    }
 
-    if(out) {
+    if(false) {
       Serial.print(lastLoop + loopTime);
       Serial.print(", ");
       Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_vel_hand) + ", ");
-      Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_pos_hand) + ", ");
-      Serial.print(fromVector(r_data_buffer[data_buffer_index].grav) + ", ");
-      Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_acc_hand) + ", ");
-      Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_vel_hand) + ", ");
-      Serial.print(fromVector(r_data_buffer[data_buffer_index].lin_pos_hand) + "\n");
+      Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_vel_fing_0) + ", ");
+      Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_vel_fing_1) + ", ");
+      Serial.print(fromVector(r_data_buffer[data_buffer_index].ang_vel_fing_2) + "\n");
     }
 
     lastLoop = lastLoop + loopTime;
@@ -200,24 +231,52 @@ void update_hand()
   r_data_buffer[next_index].grav.normalize();
   r_data_buffer[next_index].lin_acc_hand = r_data_buffer[next_index].lin_acc_hand/10.19*9.81 - r_data_buffer[next_index].grav;
 
+//  r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//  r_data_buffer[next_index].ang_vel_fing_0 = imu::Vector<3>(-1*r_data_buffer[next_index].ang_vel_fing_0.x(), -1*r_data_buffer[next_index].ang_vel_fing_0.y(), r_data_buffer[next_index].ang_vel_fing_0.z());
+//  //r_data_buffer[next_index].ang_vel_fing_0 = r_data_buffer[next_index].ang_vel_fing_0 - r_data_buffer[next_index].ang_vel_hand;
+//  r_data_buffer[next_index].grav_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
+//  r_data_buffer[next_index].grav_fing_0.normalize();
+//  r_data_buffer[next_index].grav_fing_0 = imu::Vector<3>(r_data_buffer[next_index].grav_fing_0.x(), -1*r_data_buffer[next_index].grav_fing_0.y(), r_data_buffer[next_index].grav_fing_0.z());
+//
+//  r_data_buffer[next_index].ang_vel_fing_1 = bno_1.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//  r_data_buffer[next_index].ang_vel_fing_1 = imu::Vector<3>(-1*r_data_buffer[next_index].ang_vel_fing_1.x(), -1*r_data_buffer[next_index].ang_vel_fing_1.y(), r_data_buffer[next_index].ang_vel_fing_1.z());
+//  //r_data_buffer[next_index].ang_vel_fing_1 = r_data_buffer[next_index].ang_vel_fing_1 - r_data_buffer[next_index].ang_vel_hand;
+//  r_data_buffer[next_index].grav_fing_1 = bno_1.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
+//  r_data_buffer[next_index].grav_fing_1.normalize();
+//  r_data_buffer[next_index].grav_fing_1 = imu::Vector<3>(r_data_buffer[next_index].grav_fing_1.x(), -1*r_data_buffer[next_index].grav_fing_1.y(), r_data_buffer[next_index].grav_fing_1.z());
+//
+//  r_data_buffer[next_index].ang_vel_fing_2 = bno_2.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+//  r_data_buffer[next_index].ang_vel_fing_2 = imu::Vector<3>(-1*r_data_buffer[next_index].ang_vel_fing_2.x(), -1*r_data_buffer[next_index].ang_vel_fing_2.y(), r_data_buffer[next_index].ang_vel_fing_2.z());
+//  r_data_buffer[next_index].ang_vel_fing_2 = r_data_buffer[next_index].ang_vel_fing_2 - r_data_buffer[next_index].ang_vel_hand;
+//  r_data_buffer[next_index].grav_fing_2 = bno_2.getVector(Adafruit_BNO055::VECTOR_GRAVITY);
+//  r_data_buffer[next_index].grav_fing_2.normalize();
+//  r_data_buffer[next_index].grav_fing_2 = imu::Vector<3>(r_data_buffer[next_index].grav_fing_2.x(), -1*r_data_buffer[next_index].grav_fing_2.y(), r_data_buffer[next_index].grav_fing_2.z());
+
   // Integration
   r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand*0; // Reset lin vel
   r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand*0; // Reset lin pos
   r_data_buffer[next_index].ang_pos_hand = r_data_buffer[next_index].ang_pos_hand*0; // Reset ang pos
+
+  r_data_buffer[next_index].ang_pos_fing_0 = r_data_buffer[next_index].ang_pos_fing_0*0;
   for (int i = 0; i < r_buffer_depth; i++) {
     r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand + r_data_buffer[i].lin_acc_hand; // Integrate for lin vel
     r_data_buffer[next_index].ang_pos_hand = r_data_buffer[next_index].ang_pos_hand + r_data_buffer[i].ang_vel_hand; // Integrate for ang pos
     if (i != next_index) {
       r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand + r_data_buffer[i].lin_vel_hand; // Integrate for lin pos (exclude current index)
     }
+
+    r_data_buffer[next_index].ang_pos_fing_0 = r_data_buffer[next_index].ang_pos_fing_0 + r_data_buffer[i].ang_vel_fing_0;
+    r_data_buffer[next_index].ang_pos_fing_1 = r_data_buffer[next_index].ang_pos_fing_1 + r_data_buffer[i].ang_vel_fing_1;
+    r_data_buffer[next_index].ang_pos_fing_2 = r_data_buffer[next_index].ang_pos_fing_2 + r_data_buffer[i].ang_vel_fing_2;
   }
   r_data_buffer[next_index].lin_vel_hand = r_data_buffer[next_index].lin_vel_hand * (0.001 * loopTime); // Multiply by dt
   r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand + r_data_buffer[next_index].lin_vel_hand; // Final step integration for lin pos
   r_data_buffer[next_index].lin_pos_hand = r_data_buffer[next_index].lin_pos_hand * (0.001 * loopTime); // Multiply by dt
   r_data_buffer[next_index].ang_pos_hand = r_data_buffer[next_index].ang_pos_hand * (0.001 * loopTime); // Multiply by dt
 
-  //r_data_buffer[next_index].ang_pos_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_EULER);
-  //r_data_buffer[next_index].ang_vel_fing_0 = bno_0.getVector(Adafruit_BNO055::VECTOR_GYROSCOPE);
+  r_data_buffer[next_index].ang_pos_fing_0 = r_data_buffer[next_index].ang_pos_fing_0 * (0.001 * loopTime);
+  r_data_buffer[next_index].ang_pos_fing_1 = r_data_buffer[next_index].ang_pos_fing_1 * (0.001 * loopTime);
+  r_data_buffer[next_index].ang_pos_fing_2 = r_data_buffer[next_index].ang_pos_fing_2 * (0.001 * loopTime);
 
   data_buffer_index = next_index; // Increment the current index
 }
@@ -241,6 +300,18 @@ long calc_gestures() {
     out = out | GEST_TILT_D;
     gesture.down = 1;
     gesture.flag = 1;
+  } else if(data->ang_vel_fing_0.x() >= 220 && (data->ang_vel_fing_0.x() - data->ang_vel_hand.x()) >= 100) {
+    out = out | GEST_TAP_0;
+    gesture.select = 1;
+    gesture.flag = 1;
+  } else if(data->ang_vel_fing_1.x() >= 220 && (data->ang_vel_fing_1.x() - data->ang_vel_hand.x()) >= 100) {
+    out = out | GEST_TAP_1;
+    gesture.select = 1;
+    gesture.flag = 1;
+  } else if(data->ang_vel_fing_2.x() >= 220 && (data->ang_vel_fing_2.x() - data->ang_vel_hand.x()) >= 100) {
+    out = out | GEST_TAP_2;
+    gesture.select = 1;
+    gesture.flag = 1;
   }
 
   return out;
@@ -257,3 +328,35 @@ void linkFrames(){
   light1.up = &light2;
   light2.down = &light1;
 }
+
+void scanI2C(TwoWire* twi) {
+  int nDevices = 0;
+  Serial.println("Scanning for I2C devices");
+  for(int address = 1; address < 127; address++ )
+  {
+    // The i2c_scanner uses the return value of
+    // the Write.endTransmisstion to see if
+    // a device did acknowledge to the address.
+    twi->beginTransmission(address);
+    int error = twi->endTransmission();
+ 
+    if (error == 0)
+    {
+      Serial.print("I2C device found at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.print(address,HEX);
+      Serial.println("  !");
+ 
+      nDevices++;
+    }
+    else if (error==4)
+    {
+      Serial.print("Unknown error at address 0x");
+      if (address<16)
+        Serial.print("0");
+      Serial.println(address,HEX);
+    }    
+  }
+}
+

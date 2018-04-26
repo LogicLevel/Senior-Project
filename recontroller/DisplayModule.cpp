@@ -35,6 +35,14 @@ void DisplayModule::updateDisplay(){
     processGesture();
 }
 
+void DisplayModule::displayOn(){
+  display->displayOn();
+}
+
+void DisplayModule::displayOff(){
+  display->displayOff();
+}
+
 #define horizontal_x 48
 #define vertial_y 24
 void DisplayModule::drawIndicators(){

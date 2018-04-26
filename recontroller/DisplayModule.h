@@ -26,6 +26,8 @@
       byte *batteryStatus = 0;
 
       void updateDisplay();
+      void displayOff();
+      void displayOn();
 
     private:
       // Initialize the OLED display using Wire library
